@@ -19,32 +19,29 @@
 #include <string.h>
 #include "event.h"
 
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/bool.hpp"
+
+std::shared_ptr<rclcpp::Node> node;
+rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr publisher;
+
+
+
 void event_callback(pedal_context *context, int event, void *client_data)
 {
-    FILE *mplayer_pipe = (FILE*) client_data;
-
-    if (NULL == mplayer_pipe)
-    {
-        perror("pipe is null\n");
-        return;
-    }
-
+    auto msg = std_msgs::msg::Bool();
     switch(event)
     {
-        case PEDAL_EVENT_UP_LEFT:
-            fprintf(mplayer_pipe, "seek -5\n");
-            break;
-
         case PEDAL_EVENT_UP_MIDDLE:
-            fprintf(mplayer_pipe, "pause\n");
+            msg.data = false;
+            publisher->publish(msg);
             break;
 
-        case PEDAL_EVENT_UP_RIGHT:
-            fprintf(mplayer_pipe, "seek +5\n");
+        case PEDAL_EVENT_DOWN_MIDDLE:
+            msg.data = true;
+            publisher->publish(msg);
             break;
     }
-
-    fflush(mplayer_pipe);
 }
 
 int main(int argc, char *argv[])
@@ -72,7 +69,15 @@ int main(int argc, char *argv[])
     pedal_subscribe(context, PEDAL_EVENT_UP_LEFT | PEDAL_EVENT_UP_MIDDLE | PEDAL_EVENT_UP_RIGHT);
     pedal_set_callback(context, &event_callback);
     pedal_set_client_data(context, mplayer_pipe);
+
+    // ROS stuff
+    // https://roboticsbackend.com/write-minimal-ros2-cpp-node/
+    rclcpp::init(argc, argv);
+    node = std::make_shared<rclcpp::Node>("infinity_pedal");
+    publisher = node->create_publisher<std_msgs::msg::Bool>("infinity_pedal/triggered", 2);
+
     pedal_event_loop(context);
+    rclcpp::shutdown();
 
     return result;
 }

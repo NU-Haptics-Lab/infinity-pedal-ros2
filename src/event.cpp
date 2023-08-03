@@ -23,6 +23,7 @@
 
 #include "udev.h"
 #include "event.h"
+#include "rclcpp/rclcpp.hpp"
 
 /* EXAMPLE USAGE */
 /*
@@ -79,7 +80,7 @@ void pedal_event_loop(pedal_context *context)
 
     if (0 == result)
     {
-        while (1)
+        while (rclcpp::ok())
         {
             read(fd, &hid_event, sizeof(struct hiddev_event));
 
@@ -136,7 +137,7 @@ void pedal_event(pedal_context *context, int pedal_num, long event_block)
 
 pedal_context* pedal_new()
 {
-    pedal_context *context = calloc(1, sizeof(pedal_context));
+    pedal_context *context = (pedal_context *) calloc(1, sizeof(pedal_context));
 
     if (context == NULL)
     {

@@ -173,10 +173,9 @@ int pedal_find_devnode(char **devnode)
         udev_list_entry_foreach(dev_list_entry, devices)
         {
             const char *path;
-            char *str_hiddev;
 
             path = udev_list_entry_get_name(dev_list_entry);
-            str_hiddev = strstr(path, "hiddev");
+            const char* str_hiddev = strstr(path, "hiddev");
             if (NULL != str_hiddev)
             {
                 if (NULL != hid_dev)
