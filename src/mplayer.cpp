@@ -18,28 +18,44 @@
 #include <stdio.h>
 #include <string.h>
 #include "event.h"
+#include "udev.h"
+#include <linux/hiddev.h>
+#include <fcntl.h>
+#include <thread>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/bool.hpp"
 
-std::shared_ptr<rclcpp::Node> node;
-rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr publisher;
-
-
+bool STATE = false;
 
 void event_callback(pedal_context *context, int event, void *client_data)
 {
-    auto msg = std_msgs::msg::Bool();
+    std::cout <<"event: " << event << std::endl;
+    
     switch(event)
     {
+        case PEDAL_EVENT_UP_LEFT:
+            STATE = false;
+            break;
         case PEDAL_EVENT_UP_MIDDLE:
-            msg.data = false;
-            publisher->publish(msg);
+            STATE = false;
+            break;
+        case PEDAL_EVENT_UP_RIGHT:
+            STATE = false;
             break;
 
+        case PEDAL_EVENT_DOWN_LEFT:
+            STATE = true;
+            break;
         case PEDAL_EVENT_DOWN_MIDDLE:
-            msg.data = true;
-            publisher->publish(msg);
+            STATE = true;
+            break;
+        case PEDAL_EVENT_DOWN_RIGHT:
+            STATE = true;
+            break;
+
+        default:
+            STATE = false;
             break;
     }
 }
@@ -73,10 +89,46 @@ int main(int argc, char *argv[])
     // ROS stuff
     // https://roboticsbackend.com/write-minimal-ros2-cpp-node/
     rclcpp::init(argc, argv);
-    node = std::make_shared<rclcpp::Node>("infinity_pedal");
-    publisher = node->create_publisher<std_msgs::msg::Bool>("infinity_pedal/triggered", 2);
+    std::shared_ptr<rclcpp::Node> node = std::make_shared<rclcpp::Node>("infinity_pedal");
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr publisher = node->create_publisher<std_msgs::msg::Bool>("infinity_pedal/triggered", 2);
 
-    pedal_event_loop(context);
+
+    char *devnode = NULL;
+    int fd = -1;
+    struct hiddev_event hid_event;
+    unsigned short pedal_num = 0;
+
+    result = pedal_find_devnode(&devnode);
+    if (0 == result)
+    {
+        printf("pedal device node: %s\n", devnode);
+
+        if ((fd = open(devnode, O_RDONLY)) < 0)
+        {
+            perror("failed to open pedal hid device node\n");
+            result = 1;
+            return result;
+        }
+    }
+
+    // make lambda fcn for pedal_event_once
+    auto pedalFcn = [&context](){
+        pedal_event_loop(context);
+    };
+
+    // create a separate thread for the pedal event once
+    std::thread pedalRead(pedalFcn);
+    
+    while (rclcpp::ok()){
+        // ROS publishing
+        auto msg = std_msgs::msg::Bool();
+        msg.data = STATE;
+        publisher->publish(msg);
+
+        // use rclcpp to wait for 0.05 s (20 Hz, 50 ms)
+        rclcpp::sleep_for(std::chrono::milliseconds(50));
+    }
+
     rclcpp::shutdown();
 
     return result;

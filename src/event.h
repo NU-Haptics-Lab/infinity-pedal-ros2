@@ -37,13 +37,18 @@ typedef struct pedal_context_t
 {
     long subscriptions;
     void (*event_callback)(struct pedal_context_t *context, int event, void *value);
+    void (*continuous_callback)();
     void *client_data;
-    unsigned short pedal_state;
+    unsigned short pedal_state_left;
+    unsigned short pedal_state_middle;
+    unsigned short pedal_state_right;
 } pedal_context;
 
 void pedal_event_loop(pedal_context *context);
 
-void pedal_generate_events(pedal_context *context, int pedal_num, int value);
+void pedal_generate_events(pedal_context *context, int pedal_num, int value, unsigned short &pedal_state);
+
+void pedal_event_once(int& fd, unsigned short& pedal_num, struct hiddev_event& hid_event, pedal_context *context);
 
 void pedal_event(pedal_context *context, int pedal_num, long event_block);
 
@@ -59,6 +64,8 @@ void pedal_set_callback(pedal_context *context,
                         void (*event_callback)(pedal_context *context,
                                                int event,
                                                void *value));
+
+void pedal_set_continuous_callback(pedal_context *context, void (*callback)());
 
 void pedal_set_client_data(pedal_context *context, void *client_data);
 

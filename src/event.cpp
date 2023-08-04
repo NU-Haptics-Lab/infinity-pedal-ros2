@@ -58,6 +58,31 @@ int main(void)
 }
 */
 
+void pedal_event_once(int& fd, unsigned short& pedal_num, struct hiddev_event& hid_event, pedal_context *context)
+{
+    read(fd, &hid_event, sizeof(struct hiddev_event));
+
+    switch(hid_event.hid)
+    {
+        case PEDAL_HIDEV_LEFT:
+            pedal_num = PEDAL_NUM_LEFT;
+            break;
+
+        case PEDAL_HIDEV_MIDDLE:
+            pedal_num = PEDAL_NUM_MIDDLE;
+            break;
+
+        case PEDAL_HIDEV_RIGHT:
+            pedal_num = PEDAL_NUM_RIGHT;
+            break;
+
+        default:
+            pedal_num = 0;
+            break;
+    }
+    // pedal_generate_events(context, pedal_num, hid_event.value);
+}
+
 void pedal_event_loop(pedal_context *context)
 {
     int result = 0;
@@ -80,7 +105,7 @@ void pedal_event_loop(pedal_context *context)
 
     if (0 == result)
     {
-        while (rclcpp::ok())
+        while (1)
         {
             read(fd, &hid_event, sizeof(struct hiddev_event));
 
@@ -88,14 +113,17 @@ void pedal_event_loop(pedal_context *context)
             {
                 case PEDAL_HIDEV_LEFT:
                     pedal_num = PEDAL_NUM_LEFT;
+                    pedal_generate_events(context, pedal_num, hid_event.value, context->pedal_state_left);
                     break;
 
                 case PEDAL_HIDEV_MIDDLE:
                     pedal_num = PEDAL_NUM_MIDDLE;
+                    pedal_generate_events(context, pedal_num, hid_event.value, context->pedal_state_middle);
                     break;
 
                 case PEDAL_HIDEV_RIGHT:
                     pedal_num = PEDAL_NUM_RIGHT;
+                    pedal_generate_events(context, pedal_num, hid_event.value, context->pedal_state_right);
                     break;
 
                 default:
@@ -103,18 +131,16 @@ void pedal_event_loop(pedal_context *context)
                     break;
             }
 
-            pedal_generate_events(context, pedal_num, hid_event.value);
+            
         }
     }
 }
 
-void pedal_generate_events(pedal_context *context, int pedal_num, int value)
+void pedal_generate_events(pedal_context *context, int pedal_num, int value, unsigned short &pedal_state)
 {
-    unsigned short pedal_mask = 1 << pedal_num;
-
-    if ((context->pedal_state & pedal_mask) != value)
+    if ((pedal_state) != value)
     {
-        context->pedal_state ^= pedal_mask;
+        pedal_state = value;
 
         if (1 == value)
         {
@@ -198,6 +224,18 @@ void pedal_set_callback(pedal_context *context,
     {
         context->event_callback = event_callback;
     }
+}
+
+void pedal_set_continuous_callback(pedal_context *context,
+                        void (*callback)())
+{
+
+    if (NULL == context)
+    {
+        perror("pedal_set_callback() received null context\n");
+    }
+
+    context->continuous_callback = callback;
 }
 
 void pedal_set_client_data(pedal_context *context, void *client_data)
