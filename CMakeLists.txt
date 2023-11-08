@@ -13,9 +13,11 @@ find_package(std_msgs REQUIRED)
 include_directories(/src)
 
 FILE(GLOB src_files 
-      ./src/*.cpp
-      ./src/*.hpp
-      ./src/*.h
+      ./src/event.cpp
+      ./src/mplayer.cpp
+      ./src/udev.cpp
+      ./src/event.h
+      ./src/udev.h
     )
 
 
@@ -23,10 +25,12 @@ set(NAME infinity_pedal)
 add_executable(${NAME} ${src_files})
 ament_target_dependencies(${NAME} rclcpp std_msgs)
 target_link_libraries(${NAME} -ludev)
-install(TARGETS
-  ${NAME}
-  DESTINATION lib/${PROJECT_NAME}
-)
+install(TARGETS ${NAME} DESTINATION lib/${PROJECT_NAME} )
+
+set(NAME fake_infinity_pedal)
+add_executable(${NAME} ./src/fake_pedal.cpp)
+ament_target_dependencies(${NAME} rclcpp std_msgs)
+install(TARGETS ${NAME} DESTINATION lib/${PROJECT_NAME} )
 
 
 ament_package()

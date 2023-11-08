@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     // https://roboticsbackend.com/write-minimal-ros2-cpp-node/
     rclcpp::init(argc, argv);
     std::shared_ptr<rclcpp::Node> node = std::make_shared<rclcpp::Node>("infinity_pedal");
-    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr publisher = node->create_publisher<std_msgs::msg::Bool>("infinity_pedal/triggered", 2);
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr publisher = node->create_publisher<std_msgs::msg::Bool>("infinity_pedal/triggered", 10);
 
 
     char *devnode = NULL;
